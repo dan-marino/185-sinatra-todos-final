@@ -1,10 +1,12 @@
 require 'pg'
 
-require 'pry'
-
 class DatabasePersistence
   def initialize(logger)
-    @db = PG.connect(dbname: "todos")
+    @db = if Sinatra::Base.production?
+        PG.connect(ENV['DATABASE_URL'])
+      else
+        PG.connect(dbname: "todos")
+      end
     @logger = logger
   end
 
@@ -60,13 +62,17 @@ class DatabasePersistence
   end
 
   def update_todo_status(list_id, todo_id, new_status)
-    sql = "UPDATE todos SET completed = $1 WHERE list_id = $2 AND todo_id = $3"
+    sql = "UPDATE todos SET completed = $1 WHERE list_id = $2 AND id = $3"
     query(sql, new_status, list_id, todo_id)
   end
 
   def mark_all_todos_as_completed(list_id)
     sql = "UPDATE todos SET completed = true WHERE list_id = $1"
     query(sql, list_id)
+  end
+
+  def disconnect
+    @db.close
   end
 
   private
